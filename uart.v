@@ -144,7 +144,7 @@ module uart_rx (
                     end
                 end
             end
-            STOP: begin
+    STOP: begin
                 if (i_baud_tick) begin
                     // if (tick_count_reg == 7) begin
                         //for CL output

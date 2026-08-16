@@ -23,7 +23,7 @@ module sensor_stopwatch_watch_uart_fifo (
     wire w_btn_L, w_btn_R, w_btn_UP, w_btn_DOWN;
 
     //ascii_decoder 입력
-    wire w_ascii_in;
+    wire [7:0] w_ascii_in;
     wire w_ascii_in_valid;
     wire w_tx_full;
 
@@ -35,6 +35,10 @@ module sensor_stopwatch_watch_uart_fifo (
     wire w_runstop, w_clear, w_sw_mode, w_save, w_load;
     wire w_is_data_saved;
     assign led = w_is_data_saved;
+
+    wire [7:0] i_tx_data;
+    wire       i_tx_valid;
+    wire       w_dec_save_load;
 
     wire [6:0] w_msec_stopwatch;
     wire [5:0] w_sec_stopwatch, w_min_stopwatch;
