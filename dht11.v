@@ -170,38 +170,3 @@ module dht11 (
 
     end
 endmodule
-
-module tick_us (
-    input  clk,
-    input  reset,
-    input  run_stop,
-    input  clear,
-    output o_tick_us
-);
-    //100mhz
-    parameter F_COUNT = 100;
-
-    reg [$clog2(F_COUNT)-1:0] counter_reg;
-    reg tick_us_reg;
-
-    assign o_tick_us = tick_us_reg;
-
-
-    always @(posedge clk, posedge reset) begin
-        if (reset | clear) begin
-            counter_reg <= 0;
-            tick_us_reg <= 0;
-        end else begin
-            if (run_stop) begin
-                counter_reg <= counter_reg + 1;
-                if (counter_reg == (F_COUNT - 1)) begin
-                    counter_reg <= 0;
-                    tick_us_reg <= 1'b1;
-                end else begin
-                    tick_us_reg <= 1'b0;
-                end
-            end
-        end
-    end
-
-endmodule

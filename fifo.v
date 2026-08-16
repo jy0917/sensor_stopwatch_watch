@@ -26,7 +26,7 @@ module fifo #(
         .rdata(rdata)
     );
 
-    control_unit #(
+    fifo_ptr_unit #(
         .WIDTH(2)
     ) U_CONTROL_UNIT (
         .clk  (clk),
@@ -65,7 +65,7 @@ module register_file #(
 
 endmodule
 
-module control_unit #(
+module fifo_ptr_unit #(
     parameter WIDTH = 2
 ) (
     input clk,

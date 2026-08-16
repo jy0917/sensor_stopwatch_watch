@@ -21,13 +21,13 @@ module sr04_controller (
     // assign done = done_reg;
     assign distance = distance_reg;
 
-    ila_1 U_ILA (
-        .clk(clk),
-        .probe0(start),  //start
-        .probe1(trigger),  //trigger
-        .probe2(echo),  //echo
-        .probe3(c_state)  //c_state
-    );
+    // ila_1 U_ILA (
+    //     .clk(clk),
+    //     .probe0(start),  //start
+    //     .probe1(trigger),  //trigger
+    //     .probe2(echo),  //echo
+    //     .probe3(c_state)  //c_state
+    // );
 
     tick_us U_TICK_US (
         .clk(clk),

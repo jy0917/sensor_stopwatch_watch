@@ -12,8 +12,12 @@ module fnd_controller #(
     input  [ SEC_WIDTH-1:0] sec,
     input  [ MIN_WIDTH-1:0] min,
     input  [HOUR_WIDTH-1:0] hour,
-    input [1:0] state,
-    input [1:0] sw,
+    input  [           8:0] distance,
+    input  [          15:0] humidity,
+    input  [          15:0] temperature,
+    input  [           1:0] mode,
+    input  [           1:0] state,
+    input  [           1:0] sw,
     input                   display_mode,  // sw[0] -> 0=초/1=시간 선택
     output [           3:0] fnd_com,
     output [           7:0] fnd_data
@@ -177,9 +181,97 @@ module fnd_controller #(
         .sel(display_mode),
         .mux_out(bcd)
     );
+    ///SR04는 항상 distance 하나만 보여주는 3자리 경로 하나, 
+    ///DHT는 sw[0]으로 온도/습도를 바꿔 보여주는 2자리 경로 하나 
+    ///— 이렇게 w_bcd_sr04, w_bcd_dht라는 최종 결과 신호 두 개를 만들어서, 
+    ///아까 고친 mux_4x1(mode로 STOPWATCH/WATCH/SR04/DHT 네 갈래 중 최종 선택)에 넘겨주는 역할
+    // SR04: distance 3자리쪼개서 시분할로
+    wire [3:0] w_dist_1, w_dist_10, w_dist_100;
+    digit_splitter_3 #(
+        .BIT_WIDTH(9)
+    ) U_DS_DIST (
+        .ds_in(distance),
+        .digit_1(w_dist_1),
+        .digit_10(w_dist_10),
+        .digit_100(w_dist_100)
+    );
+
+    wire [3:0] w_bcd_sr04;
+    mux_8x1 U_MUX_SR04 (
+        .in0(w_dist_1),
+        .in1(w_dist_10),
+        .in2(w_dist_100),
+        .in3(4'hf),
+        .in4(4'hf),
+        .in5(4'hf),
+        .in6(4'hf),
+        .in7(4'hf),
+        .sel(w_digit_sel),
+        .mux_out(w_bcd_sr04)
+    );
+
+    // DHT: humidity/temperature 각 2자리, display_mode로 토글
+    wire [3:0] w_hum_1, w_hum_10, w_temp_1, w_temp_10;
+    digit_splitter #(
+        .BIT_WIDTH(8)
+    ) U_DS_HUM (
+        .ds_in(humidity[15:8]),
+        .digit_1(w_hum_1),
+        .digit_10(w_hum_10)
+    );
+    digit_splitter #(
+        .BIT_WIDTH(8)
+    ) U_DS_TEMP (
+        .ds_in(temperature[15:8]),
+        .digit_1(w_temp_1),
+        .digit_10(w_temp_10)
+    );
+
+    wire [3:0] w_dht_temp_pair, w_dht_hum_pair;
+    mux_8x1 U_MUX_DHT_TEMP (
+        .in0(w_temp_1),
+        .in1(w_temp_10),
+        .in2(4'hf),
+        .in3(4'hf),
+        .in4(4'hf),
+        .in5(4'hf),
+        .in6(4'hf),
+        .in7(4'hf),
+        .sel(w_digit_sel),
+        .mux_out(w_dht_temp_pair)
+    );
+    mux_8x1 U_MUX_DHT_HUM (
+        .in0(w_hum_1),
+        .in1(w_hum_10),
+        .in2(4'hf),
+        .in3(4'hf),
+        .in4(4'hf),
+        .in5(4'hf),
+        .in6(4'hf),
+        .in7(4'hf),
+        .sel(w_digit_sel),
+        .mux_out(w_dht_hum_pair)
+    );
+
+    wire [3:0] w_bcd_dht;
+    mux_2x1 U_MUX_DHT (
+        .in0(w_dht_temp_pair),
+        .in1(w_dht_hum_pair),
+        .sel(display_mode),
+        .mux_out(w_bcd_dht)
+    );
+
+    mux_4x1 U_MUX_MODE (
+        .in0(bcd),  // mode 00 (STOPWATCH)
+        .in1(bcd),        // mode 01 (WATCH) — 둘 다 같은 bcd 와이어, 이미 top에서 sw[1]/mode로 값 자체가 갈려서 들어옴
+        .in2(w_bcd_sr04),  // mode 10
+        .in3(w_bcd_dht),  // mode 11
+        .sel(mode),
+        .mux_out(w_bcd_final)
+    );
 
     bcd U_BCD (
-        .bcd_in (bcd),
+        .bcd_in (w_bcd_final),
         .bcd_out(fnd_data)
     );
 
@@ -215,12 +307,12 @@ module indicator (
     output reg [3:0] indi_digit_1,
     output reg [3:0] indi_digit_10
 );
-    always@(*)begin
-        if(comp && state) begin
-            indi_digit_1 = 4'hf;
+    always @(*) begin
+        if (comp && state) begin
+            indi_digit_1  = 4'hf;
             indi_digit_10 = 4'hf;
         end else begin
-            indi_digit_1 = digit_1;
+            indi_digit_1  = digit_1;
             indi_digit_10 = digit_10;
         end
     end
@@ -310,6 +402,19 @@ module digit_splitter #(
 
 endmodule
 
+module digit_splitter_3 #(
+    parameter BIT_WIDTH = 9
+) (
+    input [BIT_WIDTH-1:0] ds_in,
+    output [3:0] digit_1,
+    output [3:0] digit_10,
+    output [3:0] digit_100
+);
+    assign digit_1   = ds_in % 10;
+    assign digit_10  = (ds_in / 10) % 10;
+    assign digit_100 = (ds_in / 100) % 10;
+endmodule
+
 module mux_2x1 (
     input [3:0] in0,
     input [3:0] in1,
@@ -317,8 +422,27 @@ module mux_2x1 (
     output [3:0] mux_out
 );
 
-    assign mux_out = (sel) ? in1 : in0;
+    assign mux_sout = (sel) ? in1 : in0;
 
+endmodule
+
+module mux_4x1 (
+    input [3:0] in0,
+    input [3:0] in1,
+    input [3:0] in2,
+    input [3:0] in3,
+    input [1:0] sel,
+    output reg [3:0] mux_out
+);
+    always @(*) begin
+        case (sel)
+            2'b00:   mux_out = in0;
+            2'b01:   mux_out = in1;
+            2'b10:   mux_out = in2;
+            2'b11:   mux_out = in3;
+            default: mux_out = 4'hf;
+        endcase
+    end
 endmodule
 
 module mux_8x1 (
