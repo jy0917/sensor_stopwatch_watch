@@ -25,11 +25,23 @@ module dht11 (
     //직전클럭값
     reg data_prev_reg;
 
+    // ---- 비동기 입력 동기화 (2단 FF) ----
+    reg dht_sync1, dht_sync2;
+    always @(posedge clk, posedge reset) begin
+        if (reset) begin
+            dht_sync1 <= 1'b1;
+            dht_sync2 <= 1'b1;
+        end else begin
+            dht_sync1 <= dht11_io;
+            dht_sync2 <= dht_sync1;
+        end
+    end
+
     assign dht11_io = (io_control) ? (dht11_io_reg) : 1'bz;
-    //falling,rising edge 감지
+    //falling,rising edge 감지 (동기화된 신호 기준)
     wire falling_edge, rising_edge;
-    assign falling_edge = data_prev_reg & ~dht11_io;
-    assign rising_edge  = ~data_prev_reg & dht11_io;
+    assign falling_edge = data_prev_reg & ~dht_sync2;
+    assign rising_edge  = ~data_prev_reg & dht_sync2;
     //판정된 40비트 시프트하는 용도
     reg [39:0] shift_reg, shift_next;
 
@@ -74,7 +86,7 @@ module dht11 (
             tick_count_reg <= tick_count_next;
             bit_count_reg <= bit_count_next;
             high_time_reg <= high_time_next;
-            data_prev_reg <= dht11_io;
+            data_prev_reg <= dht_sync2;
             shift_reg <= shift_next;
             sync_reg <= sync_next;
         end
