@@ -422,7 +422,7 @@ module mux_2x1 (
     output [3:0] mux_out
 );
 
-    assign mux_sout = (sel) ? in1 : in0;
+    assign mux_out = (sel) ? in1 : in0;
 
 endmodule
 
