@@ -260,7 +260,7 @@ module fnd_controller #(
         .sel(display_mode),
         .mux_out(w_bcd_dht)
     );
-
+    wire [3:0] w_bcd_final;
     mux_4x1 U_MUX_MODE (
         .in0(bcd),  // mode 00 (STOPWATCH)
         .in1(bcd),        // mode 01 (WATCH) — 둘 다 같은 bcd 와이어, 이미 top에서 sw[1]/mode로 값 자체가 갈려서 들어옴
@@ -422,7 +422,7 @@ module mux_2x1 (
     output [3:0] mux_out
 );
 
-    assign mux_sout = (sel) ? in1 : in0;
+    assign mux_out = (sel) ? in1 : in0;
 
 endmodule
 
