@@ -180,7 +180,8 @@ module sensor_stopwatch_watch_uart_fifo (
         .o_right(w_dec_right),
         .o_up(w_dec_up),
         .o_down(w_dec_down),
-        .o_get(w_dec_get)
+        .o_get(w_dec_get),
+        .o_save_load(w_dec_save_load)
     );
 
     time_ascii_sender U_TIME_ASCII_SENDER (
@@ -231,7 +232,7 @@ module sensor_stopwatch_watch_uart_fifo (
         .i_runstop((w_btn_L | w_dec_run_stop) & (mode == 2'b00)),
         .i_clear((w_btn_R | w_dec_clear) & (mode == 2'b00)),
         .i_mode((w_btn_UP | w_dec_mode) & (mode == 2'b00)),
-        .i_save_load(w_btn_DOWN & (mode == 2'b00)),  // btn down
+        .i_save_load((w_btn_DOWN | w_dec_save_load) & (mode == 2'b00)),  // btn down
         .i_is_data_saved(w_is_data_saved), // datapath에 데이터 저장되어 있는지 t/f 
         .o_runstop(w_runstop),
         .o_clear(w_clear),
