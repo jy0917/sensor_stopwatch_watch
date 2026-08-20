@@ -14,7 +14,11 @@ module ascii_decoder (
     output reg o_get,
     output reg o_save_load
 );
-    reg [7:0] char2, char1, char0;  
+    parameter get_idle = 2'd0, get_g = 2'd1, get_ge = 2'd2;
+    reg [1:0] get_st;
+
+    wire set = (rx_data == " ") || (rx_data == 8'h0D) || (rx_data == 8'h0A);
+
 
     always @(posedge clk, posedge reset) begin
         if (reset) begin
@@ -26,10 +30,8 @@ module ascii_decoder (
             o_up <= 1'b0;
             o_down <= 1'b0;
             o_get <= 1'b0;
+            get_st <= get_idle;
             o_save_load <= 1'b0;
-            char2 <= 8'd0;
-            char1 <= 8'd0;
-            char0 <= 8'd0;
         end else begin
             o_run_stop <= 1'b0;
             o_clear <= 1'b0;
@@ -42,13 +44,15 @@ module ascii_decoder (
             o_save_load <= 1'b0;
 
             if (rx_done) begin
-                char2 <= char1;
-                char1 <= char0;
-                char0 <= rx_data;
+                case (get_st)
+                    get_idle: get_st <= (rx_data == "g") ? get_g : get_idle;
+                    get_g:    get_st <= (rx_data == "e") ? get_ge : get_idle;
+                    get_ge: begin
+                        if (rx_data == "t") o_get <= 1'b1;
+                        get_st <= get_idle;
+                    end
+                endcase
 
-                if (char1 == "g" && char0 == "e" && rx_data == "t") begin
-                    o_get <= 1'b1;
-                end
 
                 case (rx_data)
                     "r": if (!run_state) o_run_stop <= 1'b1;
